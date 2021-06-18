@@ -2,8 +2,8 @@ from functools import partial
 from typing import List
 from typing import Tuple, Optional, Dict
 
-from PyQt5 import QtWidgets, QtCore, QtGui
-
+from PyQt5 import QtWidgets, QtCore, QtGui, QtNetwork
+from PyQt5.QtCore import QFile
 from .signal import Signal
 from .utils import iter_layout_widgets, state_property, is_concrete_schema
 
@@ -223,6 +223,72 @@ class ColorSchemaWidget(SchemaWidgetMixin, QColorButton):
     def state(self, data: str):
         self.setColor(data)
 
+
+class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
+
+    def __init__(self, schema: dict, ui_schema: dict, widget_builder: 'WidgetBuilder'):
+        super().__init__(schema, ui_schema, widget_builder)
+
+        print("FileRemoteLoadSchemaWidget")
+
+        layout = QtWidgets.QHBoxLayout()
+        self.setLayout(layout)
+
+        self.path_widget = QtWidgets.QLineEdit()
+        self.path_widget.setReadOnly(True);
+        self.button_widget = QtWidgets.QPushButton("Browse and load")
+        layout.addWidget(self.path_widget)
+        layout.addWidget(self.button_widget)
+
+        self.button_widget.clicked.connect(self._on_clicked)
+        self.path_widget.textChanged.connect(self.on_changed.emit)
+
+    def auth_req(self, req, auth):
+        print("Auth req")
+        auth.setUser("admin")
+        auth.setPassword("secret")
+
+    def connection_finished(self, req):
+        print("connection_finished")
+        print(req.readAll())
+        self.path_widget.setText("aaaaaaaa")
+
+
+    def _on_clicked(self, flag):
+        fileName, filter = QtWidgets.QFileDialog.getOpenFileName()
+        self.file = QFile(fileName)
+        self.file.open(QFile.ReadOnly)
+        print(self.file)
+
+        self.multiPart = QtNetwork.QHttpMultiPart(QtNetwork.QHttpMultiPart.FormDataType)
+        self.imagePart = QtNetwork.QHttpPart()
+        self.imagePart.setHeader(QtNetwork.QNetworkRequest.ContentDispositionHeader, "form-data; name=\"\"; filename=\"test.json\"")
+        self.imagePart.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, "application/octet-stream")
+        self.imagePart.setBodyDevice(self.file)
+        self. multiPart.append(self.imagePart)
+
+        url = self.schema["urlsendto"]
+        print(url)
+        self.request_qt = QtNetwork.QNetworkRequest(QtCore.QUrl(url))
+        # self.multiPart.boundary() returns augmented string with liading b and quotes
+        # so, this is work-around to fix :/
+        boundary_string_raw=str(self.multiPart.boundary())
+        boundary_string=boundary_string_raw[2:(len(boundary_string_raw)-1)]
+        print(boundary_string)
+        self.request_qt.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, 'multipart/form-data; boundary=%s' % boundary_string)
+        self.manager = QtNetwork.QNetworkAccessManager()
+        self.manager.authenticationRequired.connect(self.auth_req)
+        self.manager.finished.connect(self.connection_finished)
+        self.request = self.manager.post(self.request_qt, self.multiPart)
+
+
+    @state_property
+    def state(self) -> str:
+        return self.path_widget.text()
+
+    @state.setter
+    def state(self, state: str):
+        self.path_widget.setText(state)
 
 class FilepathSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
 
