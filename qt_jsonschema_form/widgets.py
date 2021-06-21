@@ -1,6 +1,7 @@
 from functools import partial
 from typing import List
 from typing import Tuple, Optional, Dict
+import requests
 
 from PyQt5 import QtWidgets, QtCore, QtGui, QtNetwork
 from PyQt5.QtCore import QFile
@@ -234,14 +235,13 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
         layout = QtWidgets.QHBoxLayout()
         self.setLayout(layout)
 
-        self.path_widget = QtWidgets.QLineEdit()
-        self.path_widget.setReadOnly(True);
+        self.path_widget = QtWidgets.QLabel()
         self.button_widget = QtWidgets.QPushButton("Browse and load")
         layout.addWidget(self.path_widget)
         layout.addWidget(self.button_widget)
 
         self.button_widget.clicked.connect(self._on_clicked)
-        self.path_widget.textChanged.connect(self.on_changed.emit)
+        #self.path_widget.textChanged.connect(self.on_changed.emit)
 
     def auth_req(self, req, auth):
         print("Auth req")
@@ -256,31 +256,12 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
 
     def _on_clicked(self, flag):
         fileName, filter = QtWidgets.QFileDialog.getOpenFileName()
-        self.file = QFile(fileName)
-        self.file.open(QFile.ReadOnly)
-        print(self.file)
-
-        self.multiPart = QtNetwork.QHttpMultiPart(QtNetwork.QHttpMultiPart.FormDataType)
-        self.imagePart = QtNetwork.QHttpPart()
-        self.imagePart.setHeader(QtNetwork.QNetworkRequest.ContentDispositionHeader, "form-data; name=\"\"; filename=\"test.json\"")
-        self.imagePart.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, "application/octet-stream")
-        self.imagePart.setBodyDevice(self.file)
-        self. multiPart.append(self.imagePart)
-
+        file2send = open(fileName, 'rb')
         url = self.schema["urlsendto"]
-        print(url)
-        self.request_qt = QtNetwork.QNetworkRequest(QtCore.QUrl(url))
-        # self.multiPart.boundary() returns augmented string with liading b and quotes
-        # so, this is work-around to fix :/
-        boundary_string_raw=str(self.multiPart.boundary())
-        boundary_string=boundary_string_raw[2:(len(boundary_string_raw)-1)]
-        print(boundary_string)
-        self.request_qt.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, 'multipart/form-data; boundary=%s' % boundary_string)
-        self.manager = QtNetwork.QNetworkAccessManager()
-        self.manager.authenticationRequired.connect(self.auth_req)
-        self.manager.finished.connect(self.connection_finished)
-        self.request = self.manager.post(self.request_qt, self.multiPart)
-
+        filesend_response = requests.post('http://127.0.0.1:8080/inventory.files', files = {"file_upload":  file2send },  auth=('admin', 'secret'))
+        persistent_url=filesend_response.headers['Location']
+        self.path_widget.setText(fileName+'; '+persistent_url)
+        self.on_changed.emit(self)
 
     @state_property
     def state(self) -> str:
