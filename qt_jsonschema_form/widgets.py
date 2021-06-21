@@ -230,29 +230,18 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
     def __init__(self, schema: dict, ui_schema: dict, widget_builder: 'WidgetBuilder'):
         super().__init__(schema, ui_schema, widget_builder)
 
-        print("FileRemoteLoadSchemaWidget")
-
-        layout = QtWidgets.QHBoxLayout()
+        layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
 
-        self.path_widget = QtWidgets.QLabel()
+        self.filepath_widget = QtWidgets.QLabel()
+        self.url_widget = QtWidgets.QLabel()
         self.button_widget = QtWidgets.QPushButton("Browse and load")
-        layout.addWidget(self.path_widget)
+
+        layout.addWidget(self.filepath_widget)
+        layout.addWidget(self.url_widget)
         layout.addWidget(self.button_widget)
 
         self.button_widget.clicked.connect(self._on_clicked)
-        #self.path_widget.textChanged.connect(self.on_changed.emit)
-
-    def auth_req(self, req, auth):
-        print("Auth req")
-        auth.setUser("admin")
-        auth.setPassword("secret")
-
-    def connection_finished(self, req):
-        print("connection_finished")
-        print(req.readAll())
-        self.path_widget.setText("aaaaaaaa")
-
 
     def _on_clicked(self, flag):
         fileName, filter = QtWidgets.QFileDialog.getOpenFileName()
@@ -260,16 +249,19 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
         url = self.schema["urlsendto"]
         filesend_response = requests.post('http://127.0.0.1:8080/inventory.files', files = {"file_upload":  file2send },  auth=('admin', 'secret'))
         persistent_url=filesend_response.headers['Location']
-        self.path_widget.setText(fileName+'; '+persistent_url)
+        self.filepath_widget.setText(fileName)
+        self.url_widget.setText(persistent_url)
         self.on_changed.emit(self)
 
     @state_property
-    def state(self) -> str:
-        return self.path_widget.text()
+    def state(self) -> dict:
+        return {'file_src': self.filepath_widget.text(), 'file_url': self.url_widget.text()}
 
     @state.setter
-    def state(self, state: str):
-        self.path_widget.setText(state)
+    def state(self, state: dict):
+        print(state)
+        self.filepath_widget.setText(state["file_src"])
+        self.filepath_widget.setText(state["file_url"])
 
 class FilepathSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
 
@@ -522,6 +514,8 @@ class ObjectSchemaWidget(SchemaWidgetMixin, QtWidgets.QGroupBox):
         widgets = {}
 
         for name, sub_schema in schema['properties'].items():
+            print(name)
+            print(sub_schema)
             sub_ui_schema = ui_schema.get(name, {})
             widget = widget_builder.create_widget(sub_schema, sub_ui_schema)  # TODO onchanged
             widget.on_changed.connect(partial(self.widget_on_changed, name))
