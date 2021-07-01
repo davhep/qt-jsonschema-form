@@ -7,7 +7,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui, QtNetwork
 from PyQt5.QtCore import QFile
 from .signal import Signal
 from .utils import iter_layout_widgets, state_property, is_concrete_schema
-
+import shutil
 
 class SchemaWidgetMixin:
     on_changed = Signal()
@@ -235,23 +235,37 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
 
         self.filepath_widget = QtWidgets.QLabel()
         self.url_widget = QtWidgets.QLabel()
-        self.button_widget = QtWidgets.QPushButton("Browse and load")
+        self.upload_button = QtWidgets.QPushButton("Browse and upload")
+        self.download_button = QtWidgets.QPushButton("Download file")
 
         layout.addWidget(self.filepath_widget)
         layout.addWidget(self.url_widget)
-        layout.addWidget(self.button_widget)
+        layout.addWidget(self.upload_button)
+        layout.addWidget(self.download_button)
 
-        self.button_widget.clicked.connect(self._on_clicked)
+        self.upload_button.clicked.connect(self._on_upload_clicked)
+        self.download_button.clicked.connect(self._on_download_clicked)
 
-    def _on_clicked(self, flag):
+    def _on_upload_clicked(self, flag):
         fileName, filter = QtWidgets.QFileDialog.getOpenFileName()
         file2send = open(fileName, 'rb')
         url = self.schema["urlsendto"]
         filesend_response = requests.post('http://127.0.0.1:8080/inventory.files', files = {"file_upload":  file2send },  auth=('admin', 'secret'))
-        persistent_url=filesend_response.headers['Location']
+        self.persistent_url = filesend_response.headers['Location']
         self.filepath_widget.setText(fileName)
-        self.url_widget.setText(persistent_url)
+        self.url_widget.setText(self.persistent_url)
         self.on_changed.emit(self)
+
+    def _on_download_clicked(self, flag):
+        r = requests.get(self.persistent_url+'/binary', stream=True, auth=('admin', 'secret'))
+        if r.status_code == 200:
+            fileName, filter = QtWidgets.QFileDialog.getSaveFileName()
+            with open(fileName, 'wb') as f:
+                r.raw.decode_content = True
+                shutil.copyfileobj(r.raw, f)
+        else:
+                # Manually raise if status code is anything other than 200
+                r.raise_for_status()
 
     @state_property
     def state(self) -> dict:
