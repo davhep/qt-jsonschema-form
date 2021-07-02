@@ -257,7 +257,7 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
         self.on_changed.emit(self)
 
     def _on_download_clicked(self, flag):
-        r = requests.get(self.persistent_url+'/binary', stream=True, auth=('admin', 'secret'))
+        r = requests.get(self.url_widget.text()+'/binary', stream=True, auth=('admin', 'secret'))
         if r.status_code == 200:
             fileName, filter = QtWidgets.QFileDialog.getSaveFileName()
             with open(fileName, 'wb') as f:
@@ -275,7 +275,7 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
     def state(self, state: dict):
         print(state)
         self.filepath_widget.setText(state["file_src"])
-        self.filepath_widget.setText(state["file_url"])
+        self.url_widget.setText(state["file_url"])
 
 class FilepathSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
 
