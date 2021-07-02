@@ -250,7 +250,7 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
         fileName, filter = QtWidgets.QFileDialog.getOpenFileName()
         file2send = open(fileName, 'rb')
         url = self.schema["urlsendto"]
-        filesend_response = requests.post('http://127.0.0.1:8080/inventory.files', files = {"file_upload":  file2send },  auth=('admin', 'secret'))
+        filesend_response = requests.post(url, files = {"file_upload":  file2send },  auth=('admin', 'secret'))
         self.persistent_url = filesend_response.headers['Location']
         self.filepath_widget.setText(fileName)
         self.url_widget.setText(self.persistent_url)
