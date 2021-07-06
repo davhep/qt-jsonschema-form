@@ -246,12 +246,12 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
         self.upload_button.clicked.connect(self._on_upload_clicked)
         self.download_button.clicked.connect(self._on_download_clicked)
 
+        self.file_helper = widget_builder.file_helper
+
     def _on_upload_clicked(self, flag):
         fileName, filter = QtWidgets.QFileDialog.getOpenFileName()
         file2send = open(fileName, 'rb')
-        url = self.schema["urlsendto"]
-        filesend_response = requests.post(url, files = {"file_upload":  file2send },  auth=('admin', 'secret'))
-        self.persistent_url = filesend_response.headers['Location']
+        self.persistent_url = self.file_helper(file2send)
         self.filepath_widget.setText(fileName)
         self.url_widget.setText(self.persistent_url)
         self.on_changed.emit(self)
