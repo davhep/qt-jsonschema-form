@@ -246,26 +246,23 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
         self.upload_button.clicked.connect(self._on_upload_clicked)
         self.download_button.clicked.connect(self._on_download_clicked)
 
-        self.file_helper = widget_builder.file_helper
+        self.put_file_helper = widget_builder.put_file_helper
+        self.get_file_helper = widget_builder.get_file_helper
 
     def _on_upload_clicked(self, flag):
         fileName, filter = QtWidgets.QFileDialog.getOpenFileName()
         file2send = open(fileName, 'rb')
-        self.persistent_url = self.file_helper(file2send)
+        self.persistent_url = self.put_file_helper(file2send)
         self.filepath_widget.setText(fileName)
         self.url_widget.setText(self.persistent_url)
         self.on_changed.emit(self)
 
     def _on_download_clicked(self, flag):
-        r = requests.get(self.url_widget.text()+'/binary', stream=True, auth=('admin', 'secret'))
-        if r.status_code == 200:
+        raw_file = self.get_file_helper(self.url_widget.text())
+        if (raw_file is not None):
             fileName, filter = QtWidgets.QFileDialog.getSaveFileName()
             with open(fileName, 'wb') as f:
-                r.raw.decode_content = True
-                shutil.copyfileobj(r.raw, f)
-        else:
-                # Manually raise if status code is anything other than 200
-                r.raise_for_status()
+                shutil.copyfileobj(raw_file, f)
 
     @state_property
     def state(self) -> dict:

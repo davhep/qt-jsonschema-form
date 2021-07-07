@@ -40,10 +40,11 @@ class WidgetBuilder:
         "string": lambda schema: schema.get("format", "text")
     }
 
-    def __init__(self,  file_helper=None, validator_cls=None):
+    def __init__(self,  put_file_helper, get_file_helper, validator_cls=None):
         self.widget_map = deepcopy(self.default_widget_map)
         self.validator_cls = validator_cls
-        self.file_helper = file_helper
+        self.put_file_helper = put_file_helper
+        self.get_file_helper = get_file_helper
 
     def create_form(self, schema: dict, ui_schema: dict, state=None) -> widgets.SchemaWidgetMixin:
         validator_cls = self.validator_cls
