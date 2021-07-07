@@ -5,6 +5,9 @@ import requests
 
 from PyQt5 import QtWidgets, QtCore, QtGui, QtNetwork
 from PyQt5.QtCore import QFile
+from PyQt5.QtGui import QIcon, QPixmap
+
+
 from .signal import Signal
 from .utils import iter_layout_widgets, state_property, is_concrete_schema
 import shutil
@@ -230,24 +233,32 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
     def __init__(self, schema: dict, ui_schema: dict, widget_builder: 'WidgetBuilder'):
         super().__init__(schema, ui_schema, widget_builder)
 
+        layoutH = QtWidgets.QHBoxLayout()
+        self.setLayout(layoutH)
+        self.preview_image = QtWidgets.QLabel()
+        layoutH.addWidget(self.preview_image)
+
         layout = QtWidgets.QVBoxLayout()
-        self.setLayout(layout)
 
         self.filepath_widget = QtWidgets.QLabel()
         self.url_widget = QtWidgets.QLabel()
         self.upload_button = QtWidgets.QPushButton("Browse and upload")
         self.download_button = QtWidgets.QPushButton("Download file")
 
+
         layout.addWidget(self.filepath_widget)
         layout.addWidget(self.url_widget)
         layout.addWidget(self.upload_button)
         layout.addWidget(self.download_button)
+
+        layoutH.addLayout(layout)
 
         self.upload_button.clicked.connect(self._on_upload_clicked)
         self.download_button.clicked.connect(self._on_download_clicked)
 
         self.put_file_helper = widget_builder.put_file_helper
         self.get_file_helper = widget_builder.get_file_helper
+        self.get_file_props_helper = widget_builder.get_file_props_helper
 
     def _on_upload_clicked(self, flag):
         fileName, filter = QtWidgets.QFileDialog.getOpenFileName()
@@ -273,6 +284,21 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
         print(state)
         self.filepath_widget.setText(state["file_src"])
         self.url_widget.setText(state["file_url"])
+        print(state)
+        if state["file_url"] is not None:
+            file_props = self.get_file_props_helper(state["file_url"])
+            self.content_type = None
+            if 'metadata' in file_props:
+                if 'contentType' in file_props['metadata']:
+                    self.content_type = file_props["metadata"]["contentType"]
+            print(self.content_type)
+            file_raw = self.get_file_helper(state["file_url"])
+            pixmap = QPixmap()
+            pixmap.loadFromData(file_raw, "JPEG")
+            pixmap = pixmap.scaled(200, 200, QtCore.Qt.KeepAspectRatio)
+            self.preview_image.setPixmap(pixmap)
+
+
 
 class FilepathSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
 
