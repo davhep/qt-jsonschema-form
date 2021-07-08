@@ -283,8 +283,6 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
             if 'contentType' in file_props['metadata']:
                 self.content_type = file_props["metadata"]["contentType"]
         media = self.content_type.split('/')
-        print("AAA self.content_type= ")
-        print(media)
         if media[0] == 'image' :
             file_raw = self.get_file_helper(self.url_widget.text())
             pixmap = QPixmap()
