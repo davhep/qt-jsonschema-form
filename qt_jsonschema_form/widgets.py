@@ -266,6 +266,7 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
         self.persistent_url = self.put_file_helper(file2send)
         self.filepath_widget.setText(fileName)
         self.url_widget.setText(self.persistent_url)
+        self.update_preview()
         self.on_changed.emit(self)
 
     def _on_download_clicked(self, flag):
@@ -274,6 +275,22 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
             fileName, filter = QtWidgets.QFileDialog.getSaveFileName()
             with open(fileName, 'wb') as f:
                 shutil.copyfileobj(raw_file, f)
+
+    def update_preview(self):
+        file_props = self.get_file_props_helper(self.url_widget.text())
+        self.content_type = None
+        if 'metadata' in file_props:
+            if 'contentType' in file_props['metadata']:
+                self.content_type = file_props["metadata"]["contentType"]
+        media = self.content_type.split('/')
+        print("AAA self.content_type= ")
+        print(media)
+        if media[0] == 'image' :
+            file_raw = self.get_file_helper(self.url_widget.text())
+            pixmap = QPixmap()
+            pixmap.loadFromData(file_raw, media[1])
+            pixmap = pixmap.scaled(200, 200, QtCore.Qt.KeepAspectRatio)
+            self.preview_image.setPixmap(pixmap)
 
     @state_property
     def state(self) -> dict:
@@ -286,17 +303,8 @@ class FileRemoteLoadSchemaWidget(SchemaWidgetMixin, QtWidgets.QWidget):
         self.url_widget.setText(state["file_url"])
         print(state)
         if state["file_url"] is not None:
-            file_props = self.get_file_props_helper(state["file_url"])
-            self.content_type = None
-            if 'metadata' in file_props:
-                if 'contentType' in file_props['metadata']:
-                    self.content_type = file_props["metadata"]["contentType"]
-            print(self.content_type)
-            file_raw = self.get_file_helper(state["file_url"])
-            pixmap = QPixmap()
-            pixmap.loadFromData(file_raw, "JPEG")
-            pixmap = pixmap.scaled(200, 200, QtCore.Qt.KeepAspectRatio)
-            self.preview_image.setPixmap(pixmap)
+            self.update_preview()
+
 
 
 
